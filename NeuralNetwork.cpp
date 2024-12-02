@@ -3,6 +3,9 @@
 using namespace std;
 
 // NeuralNetwork -----------------------------------------------------------------------------------------------------------------------------------
+// Getter: Accessor --> Retrieve private value --> Returns 
+// Setter: Mutator --> Modify value of private function --> Syntactically holds something
+// Encapsulation --> Things are privated so things aren't accessible to public
 
 void NeuralNetwork::eval() {
     evaluating = true;
@@ -18,22 +21,23 @@ void NeuralNetwork::setLearningRate(double lr) {
 
 // STUDENT TODO: IMPLEMENT
 void NeuralNetwork::setInputNodeIds(std::vector<int> inputNodeIds) {
-    //stub
+   this->inputNodeIds = inputNodeIds;
 }
 
 // STUDENT TODO: IMPLEMENT
 void NeuralNetwork::setOutputNodeIds(std::vector<int> outputNodeIds) {
-    //stub
+   this->outputNodeIds = outputNodeIds;
 }
+
 
 // STUDENT TODO: IMPLEMENT
 vector<int> NeuralNetwork::getInputNodeIds() const {
-    return vector<int>(); //stub
+   return this->inputNodeIds;
 }
 
 // STUDENT TODO: IMPLEMENT
 vector<int> NeuralNetwork::getOutputNodeIds() const {
-    return vector<int>(); //stub
+   return this->outputNodeIds;
 }
 
 // STUDENT TODO: IMPLEMENT
