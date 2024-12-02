@@ -21,23 +21,35 @@ void NeuralNetwork::setLearningRate(double lr) {
 
 // STUDENT TODO: IMPLEMENT
 void NeuralNetwork::setInputNodeIds(std::vector<int> inputNodeIds) {
-   this->inputNodeIds = inputNodeIds;
+   for (int id : inputNodeIds) {
+        if (id < 0 || id >= nodes.size()) {
+            std::cerr << "Invalid input node ID: " << id << std::endl;
+            return;
+        }
+    }
+    this->inputNodeIds = inputNodeIds;
 }
 
 // STUDENT TODO: IMPLEMENT
 void NeuralNetwork::setOutputNodeIds(std::vector<int> outputNodeIds) {
-   this->outputNodeIds = outputNodeIds;
+   for (int id : outputNodeIds) {
+        if (id < 0 || id >= nodes.size()) {
+            std::cerr << "Invalid output node ID: " << id << std::endl;
+            return;
+        }
+    }
+    this->outputNodeIds = outputNodeIds;
 }
 
 
 // STUDENT TODO: IMPLEMENT
 vector<int> NeuralNetwork::getInputNodeIds() const {
-   return this->inputNodeIds;
+   return inputNodeIds;
 }
 
 // STUDENT TODO: IMPLEMENT
 vector<int> NeuralNetwork::getOutputNodeIds() const {
-   return this->outputNodeIds;
+   return outputNodeIds;
 }
 
 // STUDENT TODO: IMPLEMENT
@@ -50,8 +62,39 @@ vector<double> NeuralNetwork::predict(DataInstance instance) {
         cerr << "\tNeuralNet expected input size: " << inputNodeIds.size() << endl;
         cerr << "\tBut got: " << input.size() << endl;
         return vector<double>();
+    }    // Initialize BFS
+    std::queue<int> bfsQueue;
+    std::vector<bool> visited(nodes.size(), false);
+
+    // Step 1: Set input node values and enqueue them
+    for (size_t i = 0; i < inputNodeIds.size(); ++i) {
+        int nodeId = inputNodeIds[i];
+        NodeInfo* node = getNode(nodeId);
+        if (node) {
+            node->postActivationValue = instance.x[i];
+            bfsQueue.push(nodeId);
+            visited[nodeId] = true;
+        }
     }
-    
+
+    // Step 2: BFS traversal
+    while (!bfsQueue.empty()) {
+        int currentNodeId = bfsQueue.front();
+        bfsQueue.pop();
+
+        // Compute activation for the current node
+        visitPredictNode(currentNodeId);
+
+        // Traverse neighbors
+        for (const auto& [neighborId, connection] : adjacencyList[currentNodeId]) {
+            visitPredictNeighbor(connection);
+
+            if (!visited[neighborId]) {
+                bfsQueue.push(neighborId);
+                visited[neighborId] = true;
+            }
+        }
+    }
     std::queue<int> bfsQueue;
     std::vector<bool> visited(nodes.size(), false);
 
