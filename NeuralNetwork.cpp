@@ -63,10 +63,11 @@ vector<double> NeuralNetwork::predict(DataInstance instance) {
         cerr << "\tBut got: " << input.size() << endl;
         return vector<double>();
     }    // Initialize BFS
+    
     std::queue<int> bfsQueue;
     std::vector<bool> visited(nodes.size(), false);
 
-    // Step 1: Set input node values and enqueue them
+    // Set input node values and enqueue them
     for (size_t i = 0; i < inputNodeIds.size(); ++i) {
         int nodeId = inputNodeIds[i];
         NodeInfo* node = getNode(nodeId);
@@ -77,7 +78,7 @@ vector<double> NeuralNetwork::predict(DataInstance instance) {
         }
     }
 
-    // Step 2: BFS traversal
+    // Perform BFS
     while (!bfsQueue.empty()) {
         int currentNodeId = bfsQueue.front();
         bfsQueue.pop();
@@ -95,38 +96,7 @@ vector<double> NeuralNetwork::predict(DataInstance instance) {
             }
         }
     }
-    std::queue<int> bfsQueue;
-    std::vector<bool> visited(nodes.size(), false);
 
-    // Step 1: Set input values and enqueue input nodes
-    for (size_t i = 0; i < inputNodeIds.size(); ++i) {
-        int nodeId = inputNodeIds[i];
-        NodeInfo* inputNode = nodes.at(nodeId);
-        inputNode->postActivationValue = input[i]; // Set input values
-        bfsQueue.push(nodeId);                    // Enqueue input node
-        visited[nodeId] = true;                   // Mark as visited
-    }
-
-    // Step 2: Perform BFS
-    while (!bfsQueue.empty()) {
-        int currentNodeId = bfsQueue.front();
-        bfsQueue.pop();
-
-        // Finalize the value of the current node by applying bias and activation
-        visitPredictNode(currentNodeId);
-
-        // Get neighbors from the adjacency list
-        for (const auto& [neighborId, connection] : adjacencyList[currentNodeId]) {
-            // Update neighbor's pre-activation value
-            visitPredictNeighbor(connection);
-
-            // Enqueue neighbor if not already visited
-            if (!visited[neighborId]) {
-                bfsQueue.push(neighborId);
-                visited[neighborId] = true;
-            }
-        }
-    }
 
     vector<double> output;
     for (int i = 0; i < outputNodeIds.size(); i++) {
