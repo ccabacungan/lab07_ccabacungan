@@ -21,23 +21,11 @@ void NeuralNetwork::setLearningRate(double lr) {
 
 // STUDENT TODO: IMPLEMENT
 void NeuralNetwork::setInputNodeIds(std::vector<int> inputNodeIds) {
-   for (int id : inputNodeIds) {
-        if (id < 0 || id >= nodes.size()) {
-            std::cerr << "Invalid input node ID: " << id << std::endl;
-            return;
-        }
-    }
     this->inputNodeIds = inputNodeIds;
 }
 
 // STUDENT TODO: IMPLEMENT
 void NeuralNetwork::setOutputNodeIds(std::vector<int> outputNodeIds) {
-   for (int id : outputNodeIds) {
-        if (id < 0 || id >= nodes.size()) {
-            std::cerr << "Invalid output node ID: " << id << std::endl;
-            return;
-        }
-    }
     this->outputNodeIds = outputNodeIds;
 }
 
@@ -111,40 +99,41 @@ vector<double> NeuralNetwork::predict(DataInstance instance) {
     return outputs;
 }
 
-// STUDENT TODO: IMPLEMENT
+bool NeuralNetwork::contribute(double y, double p) {
+    for (int inputId : inputNodeIds) {
+        contribute(inputId, y, p);
+    }
+    flush();
+    return true;
+}
+
 double NeuralNetwork::contribute(int nodeId, const double& y, const double& p) {
-    double incomingContribution = 0;
-    double outgoingContribution = 0;
-    NodeInfo* currNode = nodes.at(nodeId);
-    
-
-    // find each incoming contribution, and contribute to the nodes outgoing weights
-    // If the node is already found, use its precomputed contribution from the contributions map
-
-    if (contributions.count(nodeId)) {
+    if (contributions.find(nodeId) != contributions.end()) {
         return contributions[nodeId];
     }
 
-    if (adjacencyList.at(nodeId).empty()) {
-        // base case, we are at the end
-        outgoingContribution = -1 * ((y - p) / (p * (1 - p)));
+    NodeInfo* currentNode = nodes[nodeId];
+    double outgoingContribution = 0;
+
+    if (adjacencyList[nodeId].empty()) {
+        // Base case: leaf node, calculate outgoing contribution.
+        outgoingContribution = -(y - p) / (p * (1 - p));
     } else {
-        // Recursively find incoming contributions and propagate
-        for (auto& [neighborId, connection] : adjacencyList[nodeId]) {
-            incomingContribution = contribute(neighborId, y, p);  // Recursively call on neighbors
-            if (incomingContribution != 0) {
-                visitContributeNeighbor(connection, incomingContribution, outgoingContribution);  // Update neighbor
-            }
+        // Aggregate contributions from neighbors.
+        double incomingContribution = 0;
+        for (const auto& [neighbor, conn] : adjacencyList[nodeId]) {
+            double neighborContribution = contribute(neighbor, y, p);
+            Connection mutableConn = conn; // Make a mutable copy
+            visitContributeNeighbor(mutableConn, neighborContribution, outgoingContribution);
+            incomingContribution += neighborContribution;
         }
     }
 
-    visitContributeNode(nodeId, outgoingContribution);
+    if (find(inputNodeIds.begin(), inputNodeIds.end(), nodeId) == inputNodeIds.end()) {
+        visitContributeNode(nodeId, outgoingContribution);
+    }
 
-    // Store and return the computed contribution
     contributions[nodeId] = outgoingContribution;
-
-    // Now contribute to yourself and prepare the outgoing contribution
-
     return outgoingContribution;
 }
 
