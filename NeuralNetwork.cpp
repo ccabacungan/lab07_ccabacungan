@@ -2,6 +2,7 @@
 #include "NeuralNetwork.hpp"
 using namespace std;
 #include <algorithm>
+#include <queue>
 
 // NeuralNetwork -----------------------------------------------------------------------------------------------------------------------------------
 // Getter: Accessor --> Retrieve private value --> Returns 
