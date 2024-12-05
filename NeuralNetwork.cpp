@@ -54,85 +54,61 @@ vector<int> NeuralNetwork::getOutputNodeIds() const {
 
 // STUDENT TODO: IMPLEMENT
 vector<double> NeuralNetwork::predict(DataInstance instance) {
-    vector<double> input = instance.x;
-
-    // error checking : size mismatch
-    if (input.size() != inputNodeIds.size()) {
-        cerr << "input size mismatch." << endl;
-        cerr << "\tNeuralNet expected input size: " << inputNodeIds.size() << endl;
-        cerr << "\tBut got: " << input.size() << endl;
-        return vector<double>();
-    }    // Initialize BFS
+    const vector<double>& input = instance.x;
     
-    std::queue<int> bfsQueue;
-    std::vector<bool> visited(nodes.size(), false);
-
-    // Set input node values and enqueue them
-    for (size_t i = 0; i < inputNodeIds.size(); ++i) {
-        int nodeId = inputNodeIds[i];
-        NodeInfo* node = getNode(nodeId);
-        if (node) {
-            node->postActivationValue = input[i];  // Set the input value
-            bfsQueue.push(nodeId);
-            visited[nodeId] = true;
-        }
+    // Ensure input size matches expectations.
+    if (input.size() != inputNodeIds.size()) {
+        cerr << "Input size mismatch. Expected: " << inputNodeIds.size()
+             << ", but got: " << input.size() << endl;
+        return {};
     }
 
-    // Perform BFS
-    while (!bfsQueue.empty()) {
-        int currentNodeId = bfsQueue.front();
-        bfsQueue.pop();
+    // Initialize visited tracker and processing queue.
+    vector<bool> visited(nodes.size(), false);
+    queue<int> processingQueue;
 
-        // Compute activation for the current node
-        visitPredictNode(currentNodeId);  // Ensure this applies the activation function
+    // Initialize input nodes.
+    for (size_t i = 0; i < inputNodeIds.size(); ++i) {
+        int nodeId = inputNodeIds[i];
+        visited[nodeId] = true;
+        processingQueue.push(nodeId);
 
-        // Traverse neighbors
-        for (const auto& [neighborId, connection] : adjacencyList[currentNodeId]) {
-            visitPredictNeighbor(connection);  // This might need to propagate the activation function
+        // Initialize pre-activation values.
+        nodes[nodeId]->preActivationValue = input[i];
+        updateNode(nodeId, *nodes[nodeId]);
+    }
 
-            if (!visited[neighborId]) {
-                bfsQueue.push(neighborId);
-                visited[neighborId] = true;
+    // Process nodes in BFS order.
+    while (!processingQueue.empty()) {
+        int currentNode = processingQueue.front();
+        processingQueue.pop();
+
+        visitPredictNode(currentNode);
+
+        for (const auto& [neighbor, conn] : adjacencyList[currentNode]) {
+            visitPredictNeighbor(conn);
+
+            if (!visited[neighbor]) {
+                visited[neighbor] = true;
+                processingQueue.push(neighbor);
             }
         }
     }
 
-
-    vector<double> output;
-    for (int i = 0; i < outputNodeIds.size(); i++) {
-        int dest = outputNodeIds.at(i);
-        NodeInfo* outputNode = nodes.at(dest);
-        output.push_back(outputNode->postActivationValue);
+    // Collect outputs.
+    vector<double> outputs;
+    for (int outputNode : outputNodeIds) {
+        outputs.push_back(nodes[outputNode]->postActivationValue);
     }
 
     if (evaluating) {
         flush();
     } else {
-        // increment batch size
         batchSize++;
-        // accumulate derivatives. If in training mode, weights and biases get accumulated
-        contribute(instance.y, output.at(0));
-    }
-    return output;
-}
-
-// STUDENT TODO: IMPLEMENT
-bool NeuralNetwork::contribute(double y, double p) {
-    double incomingContribution = 0;
-    double outgoingContribution = 0;
-    NodeInfo* currNode = nullptr;
-
-    // find each incoming contribution, and contribute to the input layer's outgoing weights
-    // If the node is already found, use its precomputed contribution from the contributions map
-    // There is no need to visitContributeNode for the input layer since there is no bias to update.
-
-    for (int outputNodeId : outputNodeIds) {
-        contribute(outputNodeId, y, p);
+        contribute(instance.y, outputs[0]); // Assuming single output.
     }
 
-    flush();
-
-    return true;
+    return outputs;
 }
 
 // STUDENT TODO: IMPLEMENT
