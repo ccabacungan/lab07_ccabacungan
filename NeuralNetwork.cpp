@@ -101,6 +101,14 @@ vector<double> NeuralNetwork::predict(DataInstance instance) {
     return outputs;
 }
 
+bool NeuralNetwork::contribute(double y, double p) {
+    for (int inputId : inputNodeIds) {
+        contribute(inputId, y, p);
+    }
+    flush();
+    return true;
+}
+
 double NeuralNetwork::contribute(int nodeId, const double& y, const double& p) {
     if (contributions.find(nodeId) != contributions.end()) {
         return contributions[nodeId];
