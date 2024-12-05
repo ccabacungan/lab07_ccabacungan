@@ -101,14 +101,6 @@ vector<double> NeuralNetwork::predict(DataInstance instance) {
     return outputs;
 }
 
-bool NeuralNetwork::contribute(double y, double p) {
-    for (int inputId : inputNodeIds) {
-        contribute(inputId, y, p);
-    }
-    flush();
-    return true;
-}
-
 double NeuralNetwork::contribute(int nodeId, const double& y, const double& p) {
     if (contributions.find(nodeId) != contributions.end()) {
         return contributions[nodeId];
@@ -118,16 +110,20 @@ double NeuralNetwork::contribute(int nodeId, const double& y, const double& p) {
     double outgoingContribution = 0;
 
     if (adjacencyList[nodeId].empty()) {
-        // Base case: leaf node, calculate outgoing contribution.
+        // Base case: leaf node
+        if (p <= 0 || p >= 1) {
+            cerr << "Error: p value out of bounds (0 < p < 1). Received p = " << p << endl;
+            return 0;
+        }
         outgoingContribution = -(y - p) / (p * (1 - p));
     } else {
-        // Aggregate contributions from neighbors.
-        double incomingContribution = 0;
+        // Recursive case: aggregate contributions
         for (const auto& [neighbor, conn] : adjacencyList[nodeId]) {
             double neighborContribution = contribute(neighbor, y, p);
-            Connection mutableConn = conn; // Make a mutable copy
+
+            // Use a mutable copy of conn
+            Connection mutableConn = conn; 
             visitContributeNeighbor(mutableConn, neighborContribution, outgoingContribution);
-            incomingContribution += neighborContribution;
         }
     }
 
@@ -136,8 +132,14 @@ double NeuralNetwork::contribute(int nodeId, const double& y, const double& p) {
     }
 
     contributions[nodeId] = outgoingContribution;
+
+    // Debug output
+    cout << "Node " << nodeId << " | y: " << y << ", p: " << p 
+         << " | Outgoing Contribution: " << outgoingContribution << endl;
+
     return outgoingContribution;
 }
+
 
 bool NeuralNetwork::update() {
     // apply the derivative contributions
