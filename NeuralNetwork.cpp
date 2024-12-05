@@ -70,20 +70,30 @@ vector<double> NeuralNetwork::predict(DataInstance instance) {
 
     // Process nodes in BFS order.
     while (!processingQueue.empty()) {
-        int currentNode = processingQueue.front();
-        processingQueue.pop();
+    int currentNode = processingQueue.front();
+    processingQueue.pop();
 
-        visitPredictNode(currentNode);
+    // Visit the current node
+    visitPredictNode(currentNode);
 
-        for (const auto& [neighbor, conn] : adjacencyList[currentNode]) {
-            visitPredictNeighbor(conn);
+    NodeInfo* nodeInfo = nodes[currentNode];
+    
+    // Update the current node
+    updateNode(currentNode, *nodeInfo);
 
-            if (!visited[neighbor]) {
-                visited[neighbor] = true;
-                processingQueue.push(neighbor);
-            }
+    // Iterate through the neighbors
+    for (const auto& [neighbor, conn] : adjacencyList[currentNode]) {
+        // Visit the neighbor connection
+        visitPredictNeighbor(conn);
+
+        // If the neighbor hasn't been visited, push it to the queue
+        if (!visited[neighbor]) {
+            visited[neighbor] = true;
+            processingQueue.push(neighbor);
         }
     }
+}
+
 
     // Collect outputs.
     vector<double> outputs;
@@ -102,33 +112,55 @@ vector<double> NeuralNetwork::predict(DataInstance instance) {
 }
 
 bool NeuralNetwork::contribute(double y, double p) {
+    double incomingContribution = 0;
+    double outgoingContribution = 0;
+    NodeInfo* currNode = nullptr;
+
     for (int nodeId : inputNodeIds) {
         contribute(nodeId, y, p);
     }
+
     flush();
     return true;
 }
 
 double NeuralNetwork::contribute(int nodeId, const double& y, const double& p) {
-    double incomingContribution = 0.0;
+    double totalIncomingContribution = 0.0;
+    double totalOutgoingContribution = 0.0;
+    NodeInfo* currentNode = nodes.at(nodeId);
 
-    for (const auto& [neighbor, connection] : adjacencyList[nodeId]) {
-        if (!contributions.count(neighbor)) {
-            incomingContribution += contribute(neighbor, y, p);
+    // If no neighbors (base case), calculate outgoing contribution
+    if (adjacencyList.at(nodeId).empty()) {
+        totalOutgoingContribution = -1 * ((y - p) / (p * (1 - p)));
+    }
+
+    // For each neighbor of the current node (currentNode)
+    for (auto& neighborPair : adjacencyList[nodeId]) {
+        int neighborId = neighborPair.first;
+        Connection& connection = neighborPair.second;
+
+        // If the contribution has not been computed for this neighbor yet
+        if (contributions.find(neighborId) == contributions.end()) {
+            totalIncomingContribution = contribute(neighborId, y, p);
         } else {
-            incomingContribution += contributions[neighbor];
+            totalIncomingContribution = contributions.at(neighborId);
         }
-        visitContributeNeighbor(connection, contributions[neighbor], incomingContribution);
+
+        // Visit the neighbor and contribute to it
+        visitContributeNeighbor(connection, totalIncomingContribution, totalOutgoingContribution);
     }
 
-    if (!adjacencyList[nodeId].empty()) {
-        double outgoingContribution = -1.0 * ((y - p) / (p * (1 - p)));
-        contributions[nodeId] = outgoingContribution;
-        visitContributeNode(nodeId, outgoingContribution);
+    // Update the current node’s outgoing contribution if it's not an input node
+    if (find(inputNodeIds.begin(), inputNodeIds.end(), nodeId) == inputNodeIds.end()) {
+        visitContributeNode(nodeId, totalOutgoingContribution);
     }
 
-    return contributions[nodeId];
+    // Store the outgoing contribution for this node
+    contributions[nodeId] = totalOutgoingContribution;
+
+    return totalOutgoingContribution;
 }
+
 
 bool NeuralNetwork::update() {
     // apply the derivative contributions
