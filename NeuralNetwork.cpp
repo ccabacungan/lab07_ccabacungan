@@ -70,29 +70,20 @@ vector<double> NeuralNetwork::predict(DataInstance instance) {
 
     // Process nodes in BFS order.
     while (!processingQueue.empty()) {
-    int currentNode = processingQueue.front();
-    processingQueue.pop();
+        int currentNode = processingQueue.front();
+        processingQueue.pop();
 
-    // Visit the current node
-    visitPredictNode(currentNode);
+        visitPredictNode(currentNode);
 
-    NodeInfo* nodeInfo = nodes[currentNode];
-    
-    // Update the current node
-    updateNode(currentNode, *nodeInfo);
+        for (const auto& [neighbor, conn] : adjacencyList[currentNode]) {
+            visitPredictNeighbor(conn);
 
-    // Iterate through the neighbors
-    for (const auto& [neighbor, conn] : adjacencyList[currentNode]) {
-        // Visit the neighbor connection
-        visitPredictNeighbor(conn);
-
-        // If the neighbor hasn't been visited, push it to the queue
-        if (!visited[neighbor]) {
-            visited[neighbor] = true;
-            processingQueue.push(neighbor);
+            if (!visited[neighbor]) {
+                visited[neighbor] = true;
+                processingQueue.push(neighbor);
+            }
         }
     }
-}
 
 
     // Collect outputs.
