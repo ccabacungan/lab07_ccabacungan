@@ -1,6 +1,7 @@
 // includes
 #include "NeuralNetwork.hpp"
 using namespace std;
+#include <algorithm>
 
 // NeuralNetwork -----------------------------------------------------------------------------------------------------------------------------------
 // Getter: Accessor --> Retrieve private value --> Returns 
@@ -129,7 +130,7 @@ double NeuralNetwork::contribute(int nodeId, const double& y, const double& p) {
         }
     }
 
-    if (find(inputNodeIds.begin(), inputNodeIds.end(), nodeId) == inputNodeIds.end()) {
+    if (std::find(inputNodeIds.begin(), inputNodeIds.end(), nodeId) == inputNodeIds.end()) {
         visitContributeNode(nodeId, outgoingContribution);
     }
 
