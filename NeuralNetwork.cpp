@@ -102,52 +102,33 @@ vector<double> NeuralNetwork::predict(DataInstance instance) {
 }
 
 bool NeuralNetwork::contribute(double y, double p) {
-    for (int inputId : inputNodeIds) {
-        contribute(inputId, y, p);
+    for (int nodeId : inputNodeIds) {
+        contribute(nodeId, y, p);
     }
     flush();
     return true;
 }
 
 double NeuralNetwork::contribute(int nodeId, const double& y, const double& p) {
-    if (contributions.find(nodeId) != contributions.end()) {
-        return contributions[nodeId];
+    double incomingContribution = 0.0;
+
+    for (const auto& [neighbor, connection] : adjacencyList[nodeId]) {
+        if (!contributions.count(neighbor)) {
+            incomingContribution += contribute(neighbor, y, p);
+        } else {
+            incomingContribution += contributions[neighbor];
+        }
+        visitContributeNeighbor(connection, contributions[neighbor], incomingContribution);
     }
 
-    NodeInfo* currentNode = nodes[nodeId];
-    double outgoingContribution = 0;
-
-    if (adjacencyList[nodeId].empty()) {
-        // Base case: leaf node
-        if (p <= 0 || p >= 1) {
-            cerr << "Error: p value out of bounds (0 < p < 1). Received p = " << p << endl;
-            return 0;
-        }
-        outgoingContribution = -(y - p) / (p * (1 - p));
-    } else {
-        // Recursive case: aggregate contributions
-        for (const auto& [neighbor, conn] : adjacencyList[nodeId]) {
-            double neighborContribution = contribute(neighbor, y, p);
-
-            // Use a mutable copy of conn
-            Connection mutableConn = conn; 
-            visitContributeNeighbor(mutableConn, neighborContribution, outgoingContribution);
-        }
-    }
-
-    if (std::find(inputNodeIds.begin(), inputNodeIds.end(), nodeId) == inputNodeIds.end()) {
+    if (!adjacencyList[nodeId].empty()) {
+        double outgoingContribution = -1.0 * ((y - p) / (p * (1 - p)));
+        contributions[nodeId] = outgoingContribution;
         visitContributeNode(nodeId, outgoingContribution);
     }
 
-    contributions[nodeId] = outgoingContribution;
-
-    // Debug output
-    cout << "Node " << nodeId << " | y: " << y << ", p: " << p 
-         << " | Outgoing Contribution: " << outgoingContribution << endl;
-
-    return outgoingContribution;
+    return contributions[nodeId];
 }
-
 
 bool NeuralNetwork::update() {
     // apply the derivative contributions
